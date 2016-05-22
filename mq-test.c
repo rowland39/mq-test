@@ -74,7 +74,10 @@ main(void)
     mqattr.mq_msgsize = sizeof(msg_data);
     mqattr.mq_curmsgs = 0;
 
-    if ((mqdes = mq_open(queue, O_WRONLY|O_CREAT, 0600, &mqattr))
+    // Even tough mq_flags is set to O_NONBLOCK, we need to add that to the
+    // flags explicitly. The main point of the previous settings in mqattr
+    // was to set the number of messages allowed and the message size.
+    if ((mqdes = mq_open(queue, O_WRONLY|O_NONBLOCK|O_CREAT, 0600, &mqattr))
         == (mqd_t) -1) {
         perror("mq_open error");
         exit(EXIT_FAILURE);
@@ -101,27 +104,15 @@ main(void)
         data[0] = 1;
         data[1] = 2;
 
-        // We only send a message if the current queue length is zero.
-        if (mq_getattr(mqdes, &mqattr) != 0) {
-            perror("mq_getattr error");
-            mq_unlink(queue);
-            exit(EXIT_FAILURE);
-        }
-
-        // We only send a message if the queue is empty. The maximum queue size
-        // is 1.
-        if (mqattr.mq_curmsgs == 0) {
-            if (mq_send(mqdes, (const char *)&m_data, sizeof(m_data), 1) != 0) {
-                if (errno == EAGAIN) {
-                    printf("mq_send would have blocked.\n");
-                    continue;
-                }
-
+        // if we would block or the queue is full, we continue processing
+        // data and send later.
+        if (mq_send(mqdes, (const char *)&m_data, sizeof(m_data), 1) != 0) {
+            if (errno != EAGAIN) {
                 perror("mq_send error");
                 mq_unlink(queue);
                 exit(EXIT_FAILURE);
             }
-
+        } else {
             printf("Sent message to stats thread.\n");
         }
 
@@ -132,29 +123,24 @@ main(void)
     // shutdown and wait for the stats thread to get the message before
     // joinin its thread.
     while (true) {
-        if (mq_getattr(mqdes, &mqattr) != 0) {
-            perror("mq_getattr error");
-            mq_unlink(queue);
-            exit(EXIT_FAILURE);
-        }
+        data[0] = 3;
+        data[1] = 4;
+        memcpy(m_data.numbers, data, sizeof(data));
+        m_data.bytes = (uint64_t)count;
+        m_data.shutdown = true;
 
-        // We only send a message if the queue is empty. The maximum queue size
-        // is 1.
-        if (mqattr.mq_curmsgs == 0) {
-            data[0] = 3;
-            data[1] = 4;
-            memcpy(m_data.numbers, data, sizeof(data));
-            m_data.bytes = (uint64_t)count;
-            m_data.shutdown = true;
-
-            // Send the last stats update and indicate we need to shutdown.
-            // Once sent, we wait to join the stats thread.
-            if (mq_send(mqdes, (const char *)&m_data, sizeof(m_data), 1) != 0) {
-                perror("mq_send error");
-                mq_unlink(queue);
-                exit(EXIT_FAILURE);
+        // Send the last stats update and indicate we need to shutdown. Once
+        // sent, we wait to join the stats thread. If we would block or the
+        // queue is full, we continue and try again later.
+        if (mq_send(mqdes, (const char *)&m_data, sizeof(m_data), 1) != 0) {
+            if (errno == EAGAIN) {
+                continue;
             }
 
+            perror("mq_send error");
+            mq_unlink(queue);
+            exit(EXIT_FAILURE);
+        } else {
             printf("Sent last stats and shutdown flag.\n");
             break;
         }
