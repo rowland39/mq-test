@@ -131,15 +131,13 @@ main(void)
 
         // Send the last stats update and indicate we need to shutdown. Once
         // sent, we wait to join the stats thread. If we would block or the
-        // queue is full, we continue and try again later.
+        // queue is full, we try again.
         if (mq_send(mqdes, (const char *)&m_data, sizeof(m_data), 1) != 0) {
-            if (errno == EAGAIN) {
-                continue;
+            if (errno != EAGAIN) {
+                perror("mq_send error");
+                mq_unlink(queue);
+                exit(EXIT_FAILURE);
             }
-
-            perror("mq_send error");
-            mq_unlink(queue);
-            exit(EXIT_FAILURE);
         } else {
             printf("Sent last stats and shutdown flag.\n");
             break;
