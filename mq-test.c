@@ -104,7 +104,7 @@ main(void)
         data[0] = 1;
         data[1] = 2;
 
-        // if we would block or the queue is full, we continue processing
+        // If we would block or the queue is full, we continue processing
         // data and send later.
         if (mq_send(mqdes, (const char *)&m_data, sizeof(m_data), 1) != 0) {
             if (errno != EAGAIN) {
