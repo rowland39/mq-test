@@ -13,7 +13,7 @@ ifeq ($(UNAME_S),FreeBSD)
 endif
 
 .PHONY: all
-all: mq-test
+all: mq-test msg-test
 
 mq-test: mq-test.o
 	$(CC) -o $@ $^ $(LDFLAGS)
@@ -21,5 +21,11 @@ mq-test: mq-test.o
 mq-test.o: mq-test.c
 	$(CC) -c $< $(CFLAGS)
 
+msg-test: msg-test.o
+	$(CC) -o $@ $^ $(LDFLAGS)
+
+msg-test.o: msg-test.c
+	$(CC) -c $< $(CFLAGS)
+
 clean:
-	rm -f *.o mq-test
+	rm -f *.o mq-test msg-test
