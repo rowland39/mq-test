@@ -102,6 +102,7 @@ main(void)
     // of bytes allowed on the queue to be one message.
     if (msgctl(msgid, IPC_STAT, &msgattr) == -1) {
         perror("msgctl error (get attr)");
+        remove_queue();
         exit(EXIT_FAILURE);
     }
 
