@@ -21,11 +21,12 @@ mq-test: mq-test.o
 mq-test.o: mq-test.c
 	$(CC) -c $< $(CFLAGS)
 
+# The rt library is not needed for the older mechanism.
 msg-test: msg-test.o
-	$(CC) -o $@ $^ $(LDFLAGS)
+	$(CC) -o $@ $^ -pthread
 
 msg-test.o: msg-test.c
-	$(CC) -c $< $(CFLAGS)
+	$(CC) -c $< -pthread
 
 clean:
 	rm -f *.o mq-test msg-test
