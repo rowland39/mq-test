@@ -60,7 +60,7 @@ print_stats(void *arg)
 }
 
 void
-remove_queue(int msqid)
+remove_queue(void)
 {
     if (msgctl(msgid, IPC_RMID, NULL) == -1) {
         perror("msgctl error (remove queue)");
@@ -111,14 +111,14 @@ main(void)
 
     if (msgctl(msgid, IPC_SET, &msgattr) == -1) {
         perror("msgctl error (set max queue size)");
-        remove_queue(msgid);
+        remove_queue();
         exit(EXIT_FAILURE);
     }
 
     // Start the stats thread.
     if (pthread_create(&stat_thread, NULL, print_stats, NULL) == -1) {
         perror("unable to create the stats thread");
-        remove_queue(msgid);
+        remove_queue();
         exit(EXIT_FAILURE);
     }
 
@@ -142,7 +142,7 @@ main(void)
         if (msgsnd(msgid, &msg, sizeof(msg.data), IPC_NOWAIT) != 0) {
             if (errno != EAGAIN) {
                 perror("msgsnd error");
-                remove_queue(msgid);
+                remove_queue();
                 exit(EXIT_FAILURE);
             }
         } else {
@@ -169,7 +169,7 @@ main(void)
         if (msgsnd(msgid, &msg, sizeof(msg.data), IPC_NOWAIT) != 0) {
             if (errno != EAGAIN) {
                 perror("msgsnd error");
-                remove_queue(msgid);
+                remove_queue();
                 exit(EXIT_FAILURE);
             }
         } else {
@@ -179,7 +179,7 @@ main(void)
     }
 
     pthread_join(stat_thread, NULL);
-    remove_queue(msgid);
+    remove_queue();
     exit(EXIT_SUCCESS);
 }
 
