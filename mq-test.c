@@ -121,7 +121,7 @@ main(void)
 
     // The stats thread needs to get the last update. Here we indicate a
     // shutdown and wait for the stats thread to get the message before
-    // joinin its thread.
+    // joining its thread.
     while (true) {
         data[0] = 3;
         data[1] = 4;
