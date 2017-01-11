@@ -12,8 +12,6 @@
 #include <sys/msg.h>
 #include <errno.h>
 
-#define SHARED_KEY_FILE "/tmp/shared-key.txt"
-#define SHARED_KEY_ID   2377
 #define MAX_COUNT       1000000
 
 typedef struct {
@@ -75,7 +73,6 @@ remove_queue(void)
 int
 main(void)
 {
-    int fd;
     struct msqid_ds msgattr;
     message msg;
     pthread_t stat_thread;
@@ -83,22 +80,9 @@ main(void)
     int data[2];
     char text[100];
 
-    if ((fd = open(SHARED_KEY_FILE, O_CREAT|O_RDWR|O_TRUNC, 0600)) == -1) {
-        perror("open error");
-        exit(EXIT_FAILURE);
-    }
-
-    close(fd);
-
-    // The key and id values are global. They are only written to in the main
-    // thread, but they can be read by the main and stats threads at the same
-    // time.
-    if ((shmkey = ftok(SHARED_KEY_FILE, SHARED_KEY_ID)) == -1) {
-        perror("ftok error");
-        exit(EXIT_FAILURE);
-    }
-
-    if ((msgid = msgget(shmkey, IPC_CREAT|0600)) == -1) {
+    // We don't need to call shmkey() to get a key. We can do a private mapping
+    // because we are communicating between threads.
+    if ((msgid = msgget(IPC_PRIVATE, IPC_CREAT|0600)) == -1) {
         perror("msgget error");
         exit(EXIT_FAILURE);
     }
